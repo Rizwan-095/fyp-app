@@ -1,20 +1,26 @@
-# Use an official Node.js runtime as the base image
-FROM node:16-alpine
+# Stage 1: Build
+FROM node:16-alpine AS builder
 
-# Set the working directory inside the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json to the working directory
+# Install dependencies separately for caching
 COPY package*.json ./
+RUN npm install --only=production
 
-# Install application dependencies
-COPY node_modules/ ./node_modules/
-
-# Copy the entire project to the working directory
+# Copy the rest of the app
 COPY . .
 
-# Expose the port the app runs on
+# Stage 2: Run
+FROM node:16-alpine
+
+WORKDIR /usr/src/app
+
+# Copy only built files and node_modules from the builder stage
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app .
+
+# Expose the application port
 EXPOSE 3000
 
-# Start the app
+# Start the application
 CMD ["npm", "start"]
