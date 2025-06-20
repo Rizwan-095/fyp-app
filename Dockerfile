@@ -1,26 +1,16 @@
-# Stage 1: Build
-FROM node:16-alpine AS builder
+# Stage 1: Build React App
+FROM node:18-alpine as build
 
-WORKDIR /usr/src/app
-
-# Install dependencies separately for caching
+WORKDIR /app
 COPY package*.json ./
-RUN npm install --only=production
-
-# Copy the rest of the app
+RUN npm install
 COPY . .
+RUN npm run build
 
-# Stage 2: Run
-FROM node:16-alpine
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
 
-WORKDIR /usr/src/app
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 8080
 
-# Copy only built files and node_modules from the builder stage
-COPY --from=builder /usr/src/app/node_modules ./node_modules
-COPY --from=builder /usr/src/app .
-
-# Expose the application port
-EXPOSE 3000
-
-# Start the application
-CMD ["npm", "start"]
+CMD ["nginx", "-g", "daemon off;"]
